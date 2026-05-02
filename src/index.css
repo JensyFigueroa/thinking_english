@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+html, body, #root { height: 100%; }
+body {
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  background: #F6F8FB;
+  color: #0F172A;
+}
+
+/* Scrollbar bonita */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #DCE6FF; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #B9CCFF; }
