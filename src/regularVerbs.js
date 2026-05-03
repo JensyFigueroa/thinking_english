@@ -262,7 +262,7 @@ export const REGULAR_VERBS = [
   ["wash","washed","lavar"],
   ["watch","watched","ver / observar"],
   ["work","worked","trabajar"],
-  ["worry","worried","preocuparse"],
+  ["worry","worried","preocuparse"]
 ].map(([base, past, es], i) => ({
   id: 1000 + i + 1,
   base,
