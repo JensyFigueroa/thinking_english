@@ -481,7 +481,7 @@ function pickVerb(progress) {
 /* ---------- THINK IN ENGLISH ---------- */
 const normPhrase = (s) => s.toLowerCase()
   .replace(/[¿?¡!.,;:"]/g, "")
-  .replace(/[''`]/g, "'")
+  .replace(/[\u0027\u0060\u00B4\u2018\u2019\u02BC\uFF07]/g, "") // strip ALL apostrophe variants
   .replace(/\s+/g, " ")
   .trim();
 
@@ -509,8 +509,6 @@ function checkPhrase(input, phrase) {
   const a = normPhrase(input);
   const all = [phrase.en, ...(phrase.alts || [])].map(normPhrase);
   if (all.includes(a)) return { ok: true };
-  const aFix = expandContractions(a).trim();
-  if (all.some((x) => normPhrase(expandContractions(x)) === aFix)) return { ok: true };
   // similitud por palabras compartidas
   const set = new Set(a.split(" "));
   const target = new Set(normPhrase(phrase.en).split(" "));
@@ -518,6 +516,7 @@ function checkPhrase(input, phrase) {
   const close = overlap >= Math.max(2, Math.floor(target.size * 0.6));
   return { ok: false, close };
 }
+
 
 function ThinkInEnglish({ onPractice }) {
   const [progress, setProgress] = useState(() => loadJSON(PHRASE_KEY));
