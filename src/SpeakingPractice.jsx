@@ -94,9 +94,11 @@ export default function SpeakingPractice({ onPractice }) {
   const recognitionRef    = useRef(null);
   const recordStartRef    = useRef(0);
   const speechStartRef    = useRef(0);
-  const lastTranscriptRef = useRef("");      // último interim conocido (fallback iOS)
+  const lastTranscriptRef = useRef("");
   const lastConfidenceRef = useRef(0.6);
-  const finishedRef       = useRef(false);   // evita doble finishAttempt
+  const finishedRef       = useRef(false);
+  const phraseRef         = useRef(phrase);
+  const shownAtRef        = useRef(phraseShownAt);
 
   useEffect(() => { phraseRef.current  = phrase;        }, [phrase]);
   useEffect(() => { shownAtRef.current = phraseShownAt; }, [phraseShownAt]);
