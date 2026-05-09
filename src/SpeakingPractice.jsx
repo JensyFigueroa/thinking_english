@@ -6,6 +6,15 @@ import { PHRASES } from "./phrases";
 
 const SPEAKING_KEY = "speaking-attempts-v1";
 
+const isIOS =
+  typeof navigator !== "undefined" &&
+  /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+  !window.MSStream;
+
+const isSecure =
+  typeof window !== "undefined" &&
+  (window.location.protocol === "https:" || window.location.hostname === "localhost");
+
 const loadAttempts = () => {
   try { return JSON.parse(localStorage.getItem(SPEAKING_KEY)) || []; }
   catch { return []; }
@@ -82,11 +91,12 @@ export default function SpeakingPractice({ onPractice }) {
   const [error, setError]         = useState(null);
   const [attempts, setAttempts]   = useState(loadAttempts);
 
-  const recognitionRef = useRef(null);
-  const recordStartRef = useRef(0);
-  const speechStartRef = useRef(0);
-  const phraseRef      = useRef(phrase);
-  const shownAtRef     = useRef(phraseShownAt);
+  const recognitionRef    = useRef(null);
+  const recordStartRef    = useRef(0);
+  const speechStartRef    = useRef(0);
+  const lastTranscriptRef = useRef("");      // último interim conocido (fallback iOS)
+  const lastConfidenceRef = useRef(0.6);
+  const finishedRef       = useRef(false);   // evita doble finishAttempt
 
   useEffect(() => { phraseRef.current  = phrase;        }, [phrase]);
   useEffect(() => { shownAtRef.current = phraseShownAt; }, [phraseShownAt]);
@@ -95,36 +105,62 @@ export default function SpeakingPractice({ onPractice }) {
   useEffect(() => { next(); /* eslint-disable-next-line */ }, [filter]);
 
   /* === Setup Web Speech API una sola vez === */
-  useEffect(() => {
+   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
-      setError("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+      setError(
+        isIOS
+          ? "Tu iPhone no soporta esta función. Abre en Chrome desktop o usa la versión web en HTTPS."
+          : "Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge."
+      );
       return;
     }
     const rec = new SR();
     rec.lang = "en-US";
     rec.continuous = false;
-    rec.interimResults = false;
+    rec.interimResults = true;        // 🔑 clave para iOS: capturamos lo intermedio
     rec.maxAlternatives = 1;
 
     rec.onspeechstart = () => { speechStartRef.current = Date.now(); };
 
     rec.onresult = (event) => {
-      const r = event.results[0][0];
-      const txt  = r.transcript;
-      const conf = typeof r.confidence === "number" && r.confidence > 0 ? r.confidence : 0.6;
-      finishAttempt(txt, conf);
+      // Recorremos todos los results para quedarnos con el último texto disponible
+      let txt = "";
+      let conf = 0.6;
+      let isFinal = false;
+      for (let i = 0; i < event.results.length; i++) {
+        const r = event.results[i][0];
+        txt = r.transcript;
+        if (typeof r.confidence === "number" && r.confidence > 0) conf = r.confidence;
+        if (event.results[i].isFinal) isFinal = true;
+      }
+      lastTranscriptRef.current = txt;
+      lastConfidenceRef.current = conf;
+      // Si llega resultado FINAL, evaluamos enseguida
+      if (isFinal && !finishedRef.current) {
+        finishedRef.current = true;
+        finishAttempt(txt, conf);
+      }
     };
 
     rec.onerror = (e) => {
-      const msg = e.error === "no-speech"  ? "No se detectó voz. Intenta otra vez."
-                : e.error === "not-allowed" ? "Permite el acceso al micrófono."
-                : `Error: ${e.error}`;
+      const msg =
+        e.error === "no-speech"   ? "No se detectó voz. Intenta otra vez."
+      : e.error === "not-allowed" ? "Permite el acceso al micrófono en Ajustes."
+      : e.error === "network"     ? "Error de red. Verifica tu conexión."
+      : `Error: ${e.error}`;
       setError(msg);
       setRecording(false);
     };
 
-    rec.onend = () => setRecording(false);
+    rec.onend = () => {
+      setRecording(false);
+      // 🔑 fallback iOS: si onresult final NO disparó, usamos el último interim
+      if (!finishedRef.current && lastTranscriptRef.current) {
+        finishedRef.current = true;
+        finishAttempt(lastTranscriptRef.current, lastConfidenceRef.current);
+      }
+    };
 
     recognitionRef.current = rec;
     return () => { try { rec.abort(); } catch {} };
@@ -168,16 +204,29 @@ export default function SpeakingPractice({ onPractice }) {
     setError(null); setResult(null);
     speechStartRef.current = 0;
     recordStartRef.current = Date.now();
+    lastTranscriptRef.current = "";
+    lastConfidenceRef.current = 0.6;
+    finishedRef.current = false;
     try {
       recognitionRef.current.start();
       setRecording(true);
-    } catch {
-      setError("No se pudo iniciar la grabación.");
+    } catch (e) {
+      // En iOS a veces falla si ya estaba activo
+      try { recognitionRef.current.abort(); } catch {}
+      setTimeout(() => {
+        try { recognitionRef.current.start(); setRecording(true); } catch {
+          setError("No se pudo iniciar la grabación.");
+        }
+      }, 150);
     }
   }
   function stopRecording() {
-    if (!recognitionRef.current || !recording) return;
+    if (!recognitionRef.current) return;
     try { recognitionRef.current.stop(); } catch {}
+  }
+  function toggleRecording() {
+    if (recording) stopRecording();
+    else startRecording();
   }
 
   /* === KPIs agregados === */
@@ -204,6 +253,13 @@ export default function SpeakingPractice({ onPractice }) {
       <p className="text-slate-500 mb-5 text-sm sm:text-base">
         Cierra el <b>Thinking Gap</b>: escucha, piensa en inglés y dilo en voz alta.
       </p>
+
+      {!isSecure && (
+        <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+          <b>⚠️ Necesitas HTTPS</b> para usar el micrófono en este dispositivo.
+          {isIOS && <> En iPhone Safari requiere conexión segura (https://). Mira las instrucciones más abajo.</>}
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-5">
@@ -277,13 +333,17 @@ export default function SpeakingPractice({ onPractice }) {
           <div className="text-xs text-slate-400 mb-5">Say it like a native</div>
 
           <button
-            onMouseDown={startRecording}
-            onMouseUp={stopRecording}
-            onMouseLeave={stopRecording}
-            onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
-            onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
-            disabled={!!error && error.startsWith("Tu navegador")}
-            className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full grid place-items-center text-white transition shadow-soft select-none
+            {...(isIOS
+              ? { onClick: toggleRecording }
+              : {
+                  onMouseDown: startRecording,
+                  onMouseUp:   stopRecording,
+                  onMouseLeave: stopRecording,
+                  onTouchStart: (e) => { e.preventDefault(); startRecording(); },
+                  onTouchEnd:   (e) => { e.preventDefault(); stopRecording(); },
+                })}
+            disabled={!!error && error.startsWith("Tu navegador") || !isSecure}
+            className={`relative w-24 h-24 sm:w-28 sm:h-28 rounded-full grid place-items-center text-white transition shadow-soft select-none touch-manipulation
               ${recording
                 ? "bg-rose-500 scale-110 ring-8 ring-rose-200 animate-pulse"
                 : "bg-rose-500 hover:bg-rose-600 hover:scale-105 active:scale-95"}`}>
@@ -291,7 +351,9 @@ export default function SpeakingPractice({ onPractice }) {
           </button>
 
           <div className="mt-4 text-xs sm:text-sm font-semibold text-slate-600">
-            {recording ? "🔴 Grabando…" : "Toca y mantén presionado"}
+            {recording
+              ? (isIOS ? "🔴 Grabando… toca para detener" : "🔴 Grabando…")
+              : (isIOS ? "Toca el micrófono y habla" : "Toca y mantén presionado")}
           </div>
         </div>
 
