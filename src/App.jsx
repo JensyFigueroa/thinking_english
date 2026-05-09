@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Zap, LayoutDashboard, BookOpen, Target, BarChart3, Brain,
   RotateCcw, Check, X, Search, Trophy, Flame, Star, Volume2,
-  Lightbulb, RefreshCw, Menu,
+  Lightbulb, RefreshCw, Menu, Mic,
 } from "lucide-react";
 import { VERBS } from "./verbs";
 import { REGULAR_VERBS } from "./regularVerbs";
 import { PHRASES } from "./phrases";
+import SpeakingPractice from "./SpeakingPractice";
 
 const ALL_VERBS = [...VERBS, ...REGULAR_VERBS];
 const STORAGE_KEY = "verb-trainer-v1";
@@ -109,6 +110,7 @@ const [progress, setProgress] = useState(() => loadJSON(STORAGE_KEY));
           <NavItem icon={BookOpen}        label="Lista de verbos"  active={view==="study"}     onClick={()=>goTo("study")}     badge={`${ALL_VERBS.length}`} />
           <NavItem icon={Target}          label="Reto"             active={view==="challenge"} onClick={()=>goTo("challenge")} />
           <NavItem icon={Brain}           label="Think in English" active={view==="think"}     onClick={()=>goTo("think")}     badge={`${PHRASES.length}`} />
+          <NavItem icon={Mic}             label="Speaking"         active={view==="speaking"}  onClick={()=>goTo("speaking")} />
           <NavItem icon={BarChart3}       label="Mi progreso"      active={view==="progress"}  onClick={()=>goTo("progress")} />
         </nav>
 
