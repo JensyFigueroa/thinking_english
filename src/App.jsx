@@ -140,6 +140,7 @@ const [progress, setProgress] = useState(() => loadJSON(STORAGE_KEY));
           {view === "study"     && <StudyList />}
           {view === "challenge" && <Challenge progress={progress} setProgress={setProgress} onPractice={() => setStreak(bumpStreak())} />}
           {view === "think"     && <ThinkInEnglish onPractice={() => setStreak(bumpStreak())} />}
+          {view === "speaking"  && <SpeakingPractice onPractice={() => setStreak(bumpStreak())} />}
           {view === "progress"  && <ProgressView progress={progress} stats={stats} />}
         </div>
       </main>
