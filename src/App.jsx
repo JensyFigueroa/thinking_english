@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Zap, LayoutDashboard, BookOpen, Target, BarChart3, Brain,
   RotateCcw, Check, X, Search, Trophy, Flame, Star, Volume2,
-  Lightbulb, RefreshCw, Menu, Mic,
+  Lightbulb, RefreshCw, Menu, Mic, MicOff, Image as ImageIcon, Zap as ZapI,
+  TrendingUp, Gauge, Sparkles,
 } from "lucide-react";
 import { VERBS } from "./verbs";
 import { REGULAR_VERBS } from "./regularVerbs";
@@ -53,9 +54,10 @@ function speak(text, rate = 0.9) {
 
 export default function App() {
   const [view, setView] = useState("dashboard");
-const [progress, setProgress] = useState(() => loadJSON(STORAGE_KEY));
+  const [progress, setProgress] = useState(() => loadJSON(STORAGE_KEY));
   const [streak,   setStreak]   = useState(() => loadStreak());
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [drillVerbIds, setDrillVerbIds] = useState(null);
 
   useEffect(() => saveJSON(STORAGE_KEY, progress), [progress]);
 
@@ -137,8 +139,8 @@ const [progress, setProgress] = useState(() => loadJSON(STORAGE_KEY));
 
         <div className="p-4 sm:p-6 md:p-8 max-w-[1200px]">
           {view === "dashboard" && <Dashboard stats={stats} go={goTo} streak={streak} />}
-          {view === "study"     && <StudyList />}
-          {view === "challenge" && <Challenge progress={progress} setProgress={setProgress} onPractice={() => setStreak(bumpStreak())} />}
+          {view === "study"     && <StudyList progress={progress} startDrill={(ids) => { setDrillVerbIds(ids); goTo("challenge"); }} />}
+          {view === "challenge" && <Challenge progress={progress} setProgress={setProgress} onPractice={() => setStreak(bumpStreak())} drillVerbIds={drillVerbIds} clearDrill={() => setDrillVerbIds(null)} />}
           {view === "think"     && <ThinkInEnglish onPractice={() => setStreak(bumpStreak())} />}
           {view === "speaking"  && <SpeakingPractice onPractice={() => setStreak(bumpStreak())} />}
           {view === "progress"  && <ProgressView progress={progress} stats={stats} />}
@@ -271,26 +273,76 @@ function SpeakBtn({ text, size = "sm" }) {
 }
 
 /* ---------- STUDY LIST ---------- */
-function StudyList() {
+function StudyList({ progress, startDrill }) {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
+  const [mastery, setMastery] = useState("all"); // all | pending | practicing | mastered
+
+  // Identifica débiles para Smart Drill
+  const weakIds = useMemo(() =>
+    ALL_VERBS
+      .filter((v) => {
+        const p = progress?.[v.id];
+        if (!p || !p.attempts) return false;
+        const acc = p.correct / p.attempts;
+        return acc < 0.5;
+      })
+      .map((v) => v.id),
+    [progress]
+  );
 
   const filtered = ALL_VERBS.filter((v) => {
     if (filter !== "all" && v.type !== filter) return false;
+
+    if (mastery !== "all") {
+      const p = progress?.[v.id];
+      const status = (p?.streak || 0) >= 3 ? "mastered" : p?.attempts ? "practicing" : "pending";
+      if (status !== mastery) return false;
+    }
+
     const s = q.toLowerCase();
     return !s || v.base.includes(s) || v.past.includes(s) || v.pp.includes(s) || v.es.toLowerCase().includes(s);
   });
 
-
   return (
     <div>
-      <h1 className="text-3xl sm:text-4xl font-extrabold mb-1 sm:mb-2">Lista de verbos</h1>
-      <p className="text-slate-500 mb-4 sm:mb-6 text-sm">{ALL_VERBS.length} verbos · toca 🔊 para escuchar</p>
+      <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold mb-1">Lista de verbos</h1>
+          <p className="text-slate-500 text-sm">{ALL_VERBS.length} verbos · toca 🔊 para escuchar</p>
+        </div>
+        <button
+          disabled={!weakIds.length}
+          onClick={() => startDrill(weakIds)}
+          className={`px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 shadow-soft transition
+            ${weakIds.length
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600"
+              : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}>
+          <Sparkles className="w-4 h-4" />
+          Smart Drill {weakIds.length ? `(${weakIds.length})` : ""}
+        </button>
+      </div>
+
+      <div className="flex gap-2 mb-3 flex-wrap">
+        <StudyTab id="all" label="Todos" count={ALL_VERBS.length} active={filter} onChange={setFilter} />
+        <StudyTab id="irregular" label="Irregulares" count={VERBS.length} active={filter} onChange={setFilter} />
+        <StudyTab id="regular" label="Regulares" count={REGULAR_VERBS.length} active={filter} onChange={setFilter} />
+      </div>
 
       <div className="flex gap-2 mb-4 flex-wrap">
-        <StudyTab id="all"       label="Todos"       count={ALL_VERBS.length}    active={filter} onChange={setFilter} />
-        <StudyTab id="irregular" label="Irregulares" count={VERBS.length}        active={filter} onChange={setFilter} />
-        <StudyTab id="regular"   label="Regulares"   count={REGULAR_VERBS.length} active={filter} onChange={setFilter} />
+        <span className="text-xs text-slate-500 font-semibold flex items-center mr-1">Dominio:</span>
+        {[
+          { id: "all", label: "Todos" },
+          { id: "pending", label: "Pendientes" },
+          { id: "practicing", label: "Practicando" },
+          { id: "mastered", label: "Dominados" },
+        ].map((t) => (
+          <button key={t.id} onClick={() => setMastery(t.id)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition
+              ${mastery === t.id ? "bg-slate-800 text-white" : "bg-white text-slate-600 border border-slate-200"}`}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       <div className="relative mb-4">
@@ -299,7 +351,7 @@ function StudyList() {
           className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-brand-400 focus:ring-4 focus:ring-brand-100 text-sm" />
       </div>
 
-      {/* DESKTOP table */}
+      {/* DESKTOP */}
       <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm hidden sm:block">
         <div className="grid grid-cols-12 px-5 py-3 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
           <div className="col-span-1">#</div>
@@ -309,11 +361,14 @@ function StudyList() {
           <div className="col-span-2">Significado</div>
         </div>
         <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-100">
+          {filtered.length === 0 && (
+            <div className="px-5 py-10 text-center text-slate-400 text-sm">Sin resultados</div>
+          )}
           {filtered.map((v, i) => (
             <div key={v.id} className="grid grid-cols-12 px-5 py-3 text-sm hover:bg-brand-50/40 items-center">
               <div className="col-span-1 text-slate-400 flex items-center gap-1">
                 {i + 1}
-                <span className={`w-2 h-2 rounded-full ${v.type==="regular" ? "bg-emerald-400" : "bg-brand-500"}`} />
+                <span className={`w-2 h-2 rounded-full ${v.type === "regular" ? "bg-emerald-400" : "bg-brand-500"}`} />
               </div>
               <div className="col-span-3 flex items-center gap-2"><span className="font-semibold">{v.base}</span><SpeakBtn text={v.base} /></div>
               <div className="col-span-3 flex items-center gap-2 text-slate-700"><span>{v.past}</span><SpeakBtn text={v.past} /></div>
@@ -324,13 +379,13 @@ function StudyList() {
         </div>
       </div>
 
-      {/* MOBILE cards */}
+      {/* MOBILE */}
       <div className="sm:hidden space-y-2 max-h-[65vh] overflow-y-auto">
         {filtered.map((v, i) => (
           <div key={v.id} className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-slate-400">#{i + 1}</span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${v.type==="regular" ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-700"}`}>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${v.type === "regular" ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-700"}`}>
                 {v.type}
               </span>
             </div>
@@ -360,60 +415,218 @@ function MobileCell({ label, word, bold }) {
 }
 
 /* ---------- CHALLENGE ---------- */
-function Challenge({ progress, setProgress, onPractice }) {
-  const [verb, setVerb] = useState(() => pickVerb(progress));
-  const [past, setPast] = useState(""); const [pp, setPp] = useState("");
+function Challenge({ progress, setProgress, onPractice, drillVerbIds, clearDrill }) {
+  // Pool: drill (verbos débiles) o todos
+  const pool = useMemo(() => {
+    if (drillVerbIds && drillVerbIds.length)
+      return ALL_VERBS.filter((v) => drillVerbIds.includes(v.id));
+    return ALL_VERBS;
+  }, [drillVerbIds]);
+
+  const [verb, setVerb] = useState(() => pickVerbFromPool(pool, progress));
+  const [past, setPast] = useState("");
+  const [pp, setPp]     = useState("");
   const [feedback, setFeedback] = useState(null);
   const [streakSession, setStreakSession] = useState(0);
 
-  function next() { setVerb(pickVerb(progress)); setPast(""); setPp(""); setFeedback(null); }
+  // Latency tracking
+  const [shownAt, setShownAt] = useState(() => Date.now());
+  const firstInteractionRef = useRef(0);
+
+  // Voice input
+  const [activeMic, setActiveMic] = useState(null); // 'past' | 'pp' | null
+  const [micError, setMicError] = useState(null);
+  const recRef = useRef(null);
+  const pronunciationsRef = useRef([]); // confidence values for this attempt
+  const [imgSeed, setImgSeed] = useState(() => Math.floor(Math.random() * 9999));
+
+  function recordFirstInteraction() {
+    if (!firstInteractionRef.current) firstInteractionRef.current = Date.now();
+  }
+
+  function startMic(field) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setMicError("Tu navegador no soporta voz. Usa Chrome o Edge."); return; }
+    if (recRef.current) try { recRef.current.abort(); } catch {}
+    setMicError(null);
+    recordFirstInteraction();
+
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.continuous = false;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    rec.onresult = (e) => {
+      let txt = "", conf = 0.6;
+      for (let i = 0; i < e.results.length; i++) {
+        txt = e.results[i][0].transcript;
+        if (e.results[i][0].confidence > 0) conf = e.results[i][0].confidence;
+      }
+      // Solo la primera palabra (verbo)
+      const firstWord = txt.trim().split(/\s+/)[0]?.toLowerCase().replace(/[.,!?]/g, "") || "";
+      if (field === "past") setPast(firstWord);
+      else setPp(firstWord);
+      pronunciationsRef.current.push(conf);
+    };
+    rec.onerror = (e) => {
+      setMicError(e.error === "no-speech" ? "No se detectó voz" : `Error: ${e.error}`);
+      setActiveMic(null);
+    };
+    rec.onend = () => setActiveMic(null);
+
+    try {
+      rec.start();
+      recRef.current = rec;
+      setActiveMic(field);
+    } catch {
+      setMicError("No se pudo iniciar el micrófono.");
+    }
+  }
+  function stopMic() {
+    if (recRef.current) try { recRef.current.stop(); } catch {}
+  }
+
+  function next() {
+    const nv = pickVerbFromPool(pool, progress);
+    setVerb(nv);
+    setPast(""); setPp(""); setFeedback(null);
+    setShownAt(Date.now());
+    firstInteractionRef.current = 0;
+    pronunciationsRef.current = [];
+    setImgSeed(Math.floor(Math.random() * 9999));
+    setMicError(null);
+  }
+
   function check(e) {
     e.preventDefault();
     if (feedback) return next();
+    if (activeMic) stopMic();
+
     const okPast = matches(past, verb.past);
     const okPp   = matches(pp, verb.pp);
     const ok = okPast && okPp;
+
+    // 🕒 Latencia: desde frase mostrada hasta primera interacción (tecla o mic)
+    const fi = firstInteractionRef.current || Date.now();
+    const latency = Math.max(0, Math.round((fi - shownAt) / 100) / 10);
+    const slow = latency > 3;
+
+    // 🎤 Pronunciación promedio en este intento
+    const arr = pronunciationsRef.current;
+    const pron = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+
     setProgress((prev) => {
-      const cur = prev[verb.id] || { attempts: 0, correct: 0, streak: 0 };
-      return { ...prev, [verb.id]: {
-        attempts: cur.attempts + 1, correct: cur.correct + (ok ? 1 : 0),
-        streak: ok ? (cur.streak || 0) + 1 : 0, last: Date.now(),
-      }};
+      const cur = prev[verb.id] || {
+        attempts: 0, correct: 0, streak: 0, last: 0,
+        latencyTotal: 0, latencyCount: 0,
+        pronunciationTotal: 0, pronunciationCount: 0,
+        masteredAt: null,
+      };
+      const newStreak = ok ? (cur.streak || 0) + 1 : 0;
+      const justMastered = newStreak >= 3 && !cur.masteredAt;
+
+      return {
+        ...prev,
+        [verb.id]: {
+          ...cur,
+          attempts: cur.attempts + 1,
+          correct:  cur.correct  + (ok ? 1 : 0),
+          streak:   newStreak,
+          last:     Date.now(),
+          latencyTotal: (cur.latencyTotal || 0) + latency,
+          latencyCount: (cur.latencyCount || 0) + 1,
+          pronunciationTotal: pron !== null ? (cur.pronunciationTotal || 0) + pron : (cur.pronunciationTotal || 0),
+          pronunciationCount: pron !== null ? (cur.pronunciationCount || 0) + 1 : (cur.pronunciationCount || 0),
+          masteredAt: justMastered ? Date.now() : cur.masteredAt,
+        },
+      };
     });
+
     if (!ok) setTimeout(() => speak(`${verb.base}, ${verb.past}, ${verb.pp}`, 0.8), 250);
-    setFeedback({ ok, okPast, okPp });
+    setFeedback({ ok, okPast, okPp, latency, slow });
     setStreakSession((s) => (ok ? s + 1 : 0));
     onPractice && onPractice();
   }
 
   const stat = progress[verb.id] || { attempts: 0, correct: 0, streak: 0 };
+  const inDrill = !!(drillVerbIds && drillVerbIds.length);
+
+  // 🖼️ Imagen contextual desde Unsplash con fallback
+  const imgUrl = `https://source.unsplash.com/600x400/?${encodeURIComponent(verb.base)}&sig=${imgSeed}`;
+  const fallbackImg = `https://loremflickr.com/600/400/${encodeURIComponent(verb.base)}?lock=${imgSeed}`;
 
   return (
     <div className="max-w-2xl">
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-3xl sm:text-4xl font-extrabold">Modo Reto</h1>
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <h1 className="text-3xl sm:text-4xl font-extrabold flex items-center gap-2">
+          {inDrill && <Sparkles className="w-7 h-7 text-amber-500" />}
+          {inDrill ? "Smart Drill" : "Modo Reto"}
+        </h1>
         <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold bg-amber-50 text-amber-700 px-3 py-2 rounded-xl">
           <Flame className="w-4 h-4" /> Racha: {streakSession}
         </div>
       </div>
-      <p className="text-slate-500 mb-6 text-sm sm:text-base">Escribe el pasado simple y el participio pasado</p>
+      <p className="text-slate-500 mb-4 text-sm sm:text-base">
+        {inDrill
+          ? `Solo verbos débiles · ${pool.length} en cola`
+          : "Mira la imagen, escribe o di la respuesta — rápido"}
+      </p>
+
+      {inDrill && (
+        <button onClick={() => { clearDrill(); next(); }}
+          className="mb-4 text-xs sm:text-sm font-semibold text-slate-500 hover:text-rose-600 underline">
+          ← Salir del Smart Drill
+        </button>
+      )}
 
       <div className="bg-white rounded-2xl border border-slate-100 p-5 sm:p-8 shadow-sm">
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 mb-3">
+        {/* IMAGEN CONTEXTUAL */}
+        <div className="relative aspect-[3/2] rounded-xl overflow-hidden bg-slate-100 mb-5">
+          <img
+            key={imgUrl}
+            src={imgUrl}
+            onError={(e) => { if (e.target.src !== fallbackImg) e.target.src = fallbackImg; }}
+            alt={verb.base}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur px-2 py-1 rounded-lg text-[10px] font-bold text-slate-600">
+            {verb.es}
+          </div>
+        </div>
+
+        {/* VERBO */}
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-brand-600 mb-2">
             Verbo en presente
-            <span className={`text-[10px] px-2 py-0.5 rounded-full ${verb.type==="regular" ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-700"}`}>{verb.type}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full ${verb.type === "regular" ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-700"}`}>{verb.type}</span>
           </div>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <div className="text-4xl sm:text-5xl font-extrabold tracking-tight">{verb.base}</div>
             <SpeakBtn text={verb.base} size="lg" />
           </div>
-          <div className="text-slate-500 italic mt-2 text-sm sm:text-base">{verb.es}</div>
         </div>
 
+        {/* INPUTS CON MIC */}
         <form onSubmit={check} className="space-y-4">
-          <Field label="Pasado simple" value={past} onChange={setPast} disabled={!!feedback} ok={feedback?.okPast} expected={verb.past} shown={!!feedback} autoFocus />
-          <Field label="Participio pasado" value={pp} onChange={setPp} disabled={!!feedback} ok={feedback?.okPp} expected={verb.pp} shown={!!feedback} />
+          <FieldVoice
+            label="Pasado simple" value={past} onChange={(v) => { setPast(v); recordFirstInteraction(); }}
+            disabled={!!feedback} ok={feedback?.okPast} expected={verb.past} shown={!!feedback}
+            autoFocus micActive={activeMic === "past"}
+            onMic={() => activeMic === "past" ? stopMic() : startMic("past")}
+          />
+          <FieldVoice
+            label="Participio pasado" value={pp} onChange={(v) => { setPp(v); recordFirstInteraction(); }}
+            disabled={!!feedback} ok={feedback?.okPp} expected={verb.pp} shown={!!feedback}
+            micActive={activeMic === "pp"}
+            onMic={() => activeMic === "pp" ? stopMic() : startMic("pp")}
+          />
+
+          {micError && (
+            <div className="text-xs text-rose-600 font-medium bg-rose-50 px-3 py-2 rounded-lg">{micError}</div>
+          )}
+
           <button type="submit"
             className={`w-full py-3.5 rounded-xl font-bold text-white transition shadow-soft
               ${feedback ? "bg-brand-600 hover:bg-brand-700" : "bg-brand-500 hover:bg-brand-600"}`}>
@@ -421,24 +634,44 @@ function Challenge({ progress, setProgress, onPractice }) {
           </button>
         </form>
 
+        {/* FEEDBACK con latencia */}
         {feedback && (
-          <div className={`mt-5 p-4 rounded-xl flex items-center gap-3 font-semibold text-sm
-            ${feedback.ok ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-            {feedback.ok ? <><Check className="w-5 h-5" /> ¡Correcto! +1 a tu racha</> : <><X className="w-5 h-5" /> Escucha y revisa las formas</>}
+          <div className={`mt-5 p-4 rounded-xl flex items-center gap-3 text-sm font-semibold flex-wrap
+            ${!feedback.ok ? "bg-rose-50 text-rose-700"
+              : feedback.slow ? "bg-amber-50 text-amber-700"
+              : "bg-emerald-50 text-emerald-700"}`}>
+            {!feedback.ok ? <><X className="w-5 h-5" /> Revisa las formas correctas</>
+              : feedback.slow ? <><Gauge className="w-5 h-5" /> Correcto pero lento ({feedback.latency}s) · ¡intenta bajar de 3s!</>
+              : <><Check className="w-5 h-5" /> ¡Correcto y rápido! ({feedback.latency}s)</>}
           </div>
         )}
 
         <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-3 text-center">
           <Mini label="Intentos" value={stat.attempts} />
           <Mini label="Aciertos" value={stat.correct} />
-          <Mini label="Racha" value={stat.streak} />
+          <Mini label="Racha"    value={stat.streak} />
         </div>
       </div>
     </div>
   );
 }
 
-function Field({ label, value, onChange, disabled, ok, expected, shown, autoFocus }) {
+/* Selecciona verbo desde un pool específico (drill o completo) */
+function pickVerbFromPool(pool, progress) {
+  if (!pool.length) return ALL_VERBS[0];
+  const weighted = pool.map((v) => {
+    const p = progress[v.id] || { attempts: 0, correct: 0, streak: 0 };
+    if ((p.streak || 0) >= 3) return { v, w: 0.2 };
+    const accuracy = p.attempts ? p.correct / p.attempts : 0;
+    return { v, w: 1 + (1 - accuracy) * 2 + (p.attempts === 0 ? 1.5 : 0) };
+  });
+  const total = weighted.reduce((a, b) => a + b.w, 0);
+  let r = Math.random() * total;
+  for (const x of weighted) { r -= x.w; if (r <= 0) return x.v; }
+  return weighted[0].v;
+}
+
+function FieldVoice({ label, value, onChange, disabled, ok, expected, shown, autoFocus, micActive, onMic }) {
   const border = !shown
     ? "border-slate-200 focus:border-brand-400 focus:ring-brand-100"
     : ok ? "border-emerald-300 bg-emerald-50/40" : "border-rose-300 bg-rose-50/40";
@@ -446,16 +679,30 @@ function Field({ label, value, onChange, disabled, ok, expected, shown, autoFocu
     <div>
       <label className="text-sm font-semibold text-slate-600 mb-1.5 block">{label}</label>
       <div className="relative">
-        <input autoFocus={autoFocus} disabled={disabled} value={value}
+        <input
+          autoFocus={autoFocus}
+          disabled={disabled}
+          value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={`Escribe el ${label.toLowerCase()}...`}
-          className={`w-full px-4 py-3 pr-12 rounded-xl border-2 bg-white focus:outline-none focus:ring-4 transition ${border}`} />
-        {shown && (
-          <button type="button" onClick={() => speak(expected.split("/")[0])}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-500 hover:text-white">
-            <Volume2 className="w-4 h-4" />
-          </button>
-        )}
+          placeholder={`Escribe o di el ${label.toLowerCase()}...`}
+          className={`w-full px-4 py-3 pr-24 rounded-xl border-2 bg-white focus:outline-none focus:ring-4 transition ${border}`}
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {!disabled && (
+            <button type="button" onClick={onMic}
+              title={micActive ? "Detener" : "Hablar"}
+              className={`w-8 h-8 grid place-items-center rounded-lg transition shrink-0
+                ${micActive ? "bg-rose-500 text-white animate-pulse" : "bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white"}`}>
+              {micActive ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+            </button>
+          )}
+          {shown && (
+            <button type="button" onClick={() => speak(expected.split("/")[0])}
+              className="w-8 h-8 grid place-items-center rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-500 hover:text-white">
+              <Volume2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
       {shown && !ok && (
         <div className="text-xs mt-1.5 text-rose-600 font-medium">Correcto: <span className="font-bold">{expected}</span></div>
@@ -466,19 +713,6 @@ function Field({ label, value, onChange, disabled, ok, expected, shown, autoFocu
 
 function Mini({ label, value }) {
   return <div><div className="text-xl sm:text-2xl font-extrabold">{value}</div><div className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-wider">{label}</div></div>;
-}
-
-function pickVerb(progress) {
-  const weighted = ALL_VERBS.map((v) => {
-    const p = progress[v.id] || { attempts: 0, correct: 0, streak: 0 };
-    if ((p.streak || 0) >= 3) return { v, w: 0.2 };
-    const accuracy = p.attempts ? p.correct / p.attempts : 0;
-    return { v, w: 1 + (1 - accuracy) * 2 + (p.attempts === 0 ? 1.5 : 0) };
-  });
-  const total = weighted.reduce((a, b) => a + b.w, 0);
-  let r = Math.random() * total;
-  for (const x of weighted) { r -= x.w; if (r <= 0) return x.v; }
-  return weighted[0].v;
 }
 
 /* ---------- THINK IN ENGLISH ---------- */
@@ -682,16 +916,18 @@ function ThinkInEnglish({ onPractice }) {
 
 /* ---------- PROGRESS ---------- */
 function ProgressView({ progress, stats }) {
-  const [filter, setFilter] = useState("all"); // all | pending | practicing | mastered | failed
-  const [sort,   setSort]   = useState("attempts"); // attempts | failed | accuracyAsc | recent
+  const [filter, setFilter] = useState("all");
+  const [sort,   setSort]   = useState("attempts");
 
   const enriched = ALL_VERBS.map((v) => {
     const p = progress[v.id] || { attempts: 0, correct: 0, streak: 0, last: 0 };
     const acc = p.attempts ? Math.round((p.correct / p.attempts) * 100) : 0;
     const fails = (p.attempts || 0) - (p.correct || 0);
     const status = (p.streak || 0) >= 3 ? "mastered" : p.attempts ? "practicing" : "pending";
-    const isFailed = p.attempts > 0 && acc < 60; // < 60% = "fallado"
-    return { ...v, ...p, acc, fails, status, isFailed };
+    const isFailed = p.attempts > 0 && acc < 60;
+    const avgLat = p.latencyCount ? +(p.latencyTotal / p.latencyCount).toFixed(1) : null;
+    const pron = p.pronunciationCount ? Math.round((p.pronunciationTotal / p.pronunciationCount) * 100) : null;
+    return { ...v, ...p, acc, fails, status, isFailed, avgLat, pron };
   });
 
   const counts = {
@@ -701,6 +937,40 @@ function ProgressView({ progress, stats }) {
     mastered: enriched.filter(r => r.status === "mastered").length,
     failed: enriched.filter(r => r.isFailed).length,
   };
+
+  // ===== Métricas globales de fluidez =====
+  const fluencyMetrics = useMemo(() => {
+    let latTotal = 0, latCount = 0, pronTotal = 0, pronCount = 0;
+    Object.values(progress).forEach((p) => {
+      if (p.latencyCount) { latTotal += p.latencyTotal; latCount += p.latencyCount; }
+      if (p.pronunciationCount) { pronTotal += p.pronunciationTotal; pronCount += p.pronunciationCount; }
+    });
+    return {
+      avgLatency: latCount ? +(latTotal / latCount).toFixed(1) : 0,
+      avgPronunciation: pronCount ? Math.round((pronTotal / pronCount) * 100) : 0,
+      hasLatency: latCount > 0,
+      hasPron: pronCount > 0,
+    };
+  }, [progress]);
+
+  // ===== Gráfica de retención (verbos dominados por día - últimos 14 días) =====
+  const retentionData = useMemo(() => {
+    const events = Object.values(progress)
+      .map((p) => p.masteredAt)
+      .filter(Boolean);
+    const days = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    for (let i = 13; i >= 0; i--) {
+      const dayStart = new Date(now); dayStart.setDate(now.getDate() - i);
+      const dayEnd   = new Date(dayStart); dayEnd.setDate(dayStart.getDate() + 1);
+      const count = events.filter((t) => t >= dayStart.getTime() && t < dayEnd.getTime()).length;
+      days.push({ date: dayStart, count, label: dayStart.toLocaleDateString("es", { day: "numeric", month: "short" }) });
+    }
+    const max = Math.max(1, ...days.map((d) => d.count));
+    const totalThisPeriod = days.reduce((s, d) => s + d.count, 0);
+    return { days, max, totalThisPeriod };
+  }, [progress]);
 
   let rows = enriched;
   if (filter === "pending")    rows = rows.filter(r => r.status === "pending");
@@ -712,9 +982,24 @@ function ProgressView({ progress, stats }) {
     if (sort === "attempts")    return b.attempts - a.attempts;
     if (sort === "failed")      return b.fails - a.fails;
     if (sort === "accuracyAsc") return (a.attempts ? a.acc : 999) - (b.attempts ? b.acc : 999);
+    if (sort === "latencyDesc") return (b.avgLat || 0) - (a.avgLat || 0);
     if (sort === "recent")      return (b.last || 0) - (a.last || 0);
     return 0;
   });
+
+  const tabClass = (id, color = "slate") => {
+    const isActive = filter === id;
+    const palettes = {
+      slate:   isActive ? "bg-brand-500 text-white shadow-soft"   : "bg-white text-slate-600 border border-slate-200",
+      rose:    isActive ? "bg-rose-500 text-white shadow-soft"    : "bg-white text-rose-600 border border-rose-200",
+      emerald: isActive ? "bg-emerald-500 text-white shadow-soft" : "bg-white text-emerald-700 border border-emerald-200",
+      amber:   isActive ? "bg-amber-500 text-white shadow-soft"   : "bg-white text-amber-700 border border-amber-200",
+    };
+    return `px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 shrink-0 ${palettes[color]}`;
+  };
+  const badge = (id) =>
+    `text-[10px] font-bold px-1.5 py-0.5 rounded-full ${filter === id ? "bg-white/25" : "bg-slate-100 text-slate-600"}`;
+  const statusEs = (s) => (s === "mastered" ? "dominado" : s === "practicing" ? "practicando" : "pendiente");
 
   return (
     <div>
@@ -723,22 +1008,92 @@ function ProgressView({ progress, stats }) {
         Llevas <b>{stats.mastered}</b> dominados, <b>{counts.failed}</b> fallados y <b>{stats.remaining}</b> por aprender.
       </p>
 
-      <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-5">
+      {/* MÉTRICAS BÁSICAS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <StatCard color="violet" icon={Star}   value={`${stats.pctMastered}%`} label="Completado" />
         <StatCard color="blue"   icon={Trophy} value={`${stats.accuracy}%`}    label="Eficacia" />
         <StatCard color="rose"   icon={Target} value={stats.attempts}          label="Intentos" />
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 -mx-1 px-1">
-        <FilterTab id="all"        label="Todos"       active={filter} onChange={setFilter} count={counts.all} />
-        <FilterTab id="pending"    label="Pendientes"  active={filter} onChange={setFilter} count={counts.pending} />
-        <FilterTab id="practicing" label="Practicando" active={filter} onChange={setFilter} count={counts.practicing} color="amber" />
-        <FilterTab id="mastered"   label="Dominados"   active={filter} onChange={setFilter} count={counts.mastered}   color="emerald" />
-        <FilterTab id="failed"     label="Fallados"    active={filter} onChange={setFilter} count={counts.failed}     color="rose" />
+      {/* MÉTRICAS DE FLUIDEZ */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5">
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 grid place-items-center mb-3">
+            <Gauge className="w-5 h-5" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-extrabold">
+            {fluencyMetrics.hasLatency ? `${fluencyMetrics.avgLatency}s` : "—"}
+          </div>
+          <div className="text-xs text-slate-500 mt-1">Velocidad de respuesta promedio</div>
+          {fluencyMetrics.hasLatency && (
+            <div className={`text-[10px] font-bold mt-2 inline-block px-2 py-0.5 rounded-full
+              ${fluencyMetrics.avgLatency <= 3 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+              {fluencyMetrics.avgLatency <= 3 ? "🚀 Fluido" : "🐢 Aún traduces mentalmente"}
+            </div>
+          )}
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 grid place-items-center mb-3">
+            <Mic className="w-5 h-5" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-extrabold">
+            {fluencyMetrics.hasPron ? `${fluencyMetrics.avgPronunciation}%` : "—"}
+          </div>
+          <div className="text-xs text-slate-500 mt-1">Claridad al pronunciar</div>
+          {!fluencyMetrics.hasPron && (
+            <div className="text-[10px] mt-2 text-slate-400">Usa el 🎤 en Reto para medirlo</div>
+          )}
+        </div>
       </div>
 
-      {/* Orden */}
+      {/* GRÁFICA DE RETENCIÓN */}
+      <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm mb-5">
+        <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+          <div>
+            <div className="font-bold flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-brand-600" />
+              Retención · últimos 14 días
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              {retentionData.totalThisPeriod} verbos dominados en este periodo
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-end gap-1 sm:gap-1.5 h-32 mt-4">
+          {retentionData.days.map((d, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0" title={`${d.label}: ${d.count} dominados`}>
+              <div className="text-[9px] font-bold text-slate-700">{d.count > 0 ? d.count : ""}</div>
+              <div className="w-full bg-slate-100 rounded-t-md relative overflow-hidden" style={{ height: "100%" }}>
+                <div
+                  className={`absolute bottom-0 left-0 right-0 rounded-t-md transition-all
+                    ${d.count > 0 ? "bg-gradient-to-t from-brand-500 to-brand-400" : ""}`}
+                  style={{ height: d.count > 0 ? `${(d.count / retentionData.max) * 100}%` : "0%" }}
+                />
+              </div>
+              <div className="text-[8px] sm:text-[10px] text-slate-400 truncate w-full text-center">
+                {d.label.split(" ")[0]}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {retentionData.totalThisPeriod === 0 && (
+          <div className="text-center text-xs text-slate-400 mt-3">
+            Domina verbos (3 aciertos seguidos) para que aparezcan aquí 🎯
+          </div>
+        )}
+      </div>
+
+      {/* FILTROS */}
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-2 -mx-1 px-1">
+        <button onClick={() => setFilter("all")}        className={tabClass("all")}>Todos <span className={badge("all")}>{counts.all}</span></button>
+        <button onClick={() => setFilter("pending")}    className={tabClass("pending")}>Pendientes <span className={badge("pending")}>{counts.pending}</span></button>
+        <button onClick={() => setFilter("practicing")} className={tabClass("practicing", "amber")}>Practicando <span className={badge("practicing")}>{counts.practicing}</span></button>
+        <button onClick={() => setFilter("mastered")}   className={tabClass("mastered", "emerald")}>Dominados <span className={badge("mastered")}>{counts.mastered}</span></button>
+        <button onClick={() => setFilter("failed")}     className={tabClass("failed", "rose")}>Fallados <span className={badge("failed")}>{counts.failed}</span></button>
+      </div>
+
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         <span className="text-xs text-slate-500 font-semibold">Ordenar:</span>
         <select value={sort} onChange={(e) => setSort(e.target.value)}
@@ -746,6 +1101,7 @@ function ProgressView({ progress, stats }) {
           <option value="attempts">Más practicados</option>
           <option value="failed">Más fallos</option>
           <option value="accuracyAsc">Menor eficacia</option>
+          <option value="latencyDesc">Más lentos</option>
           <option value="recent">Más recientes</option>
         </select>
       </div>
@@ -753,44 +1109,40 @@ function ProgressView({ progress, stats }) {
       <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
         <div className="hidden sm:grid grid-cols-12 px-5 py-3 bg-slate-50 text-xs font-bold uppercase tracking-wider text-slate-500">
           <div className="col-span-3">Verbo</div>
-          <div className="col-span-2">Tipo</div>
+          <div className="col-span-1">Tipo</div>
           <div className="col-span-1">Int.</div>
-          <div className="col-span-1">OK</div>
-          <div className="col-span-1">Fallos</div>
+          <div className="col-span-1">Fall.</div>
           <div className="col-span-2">Eficacia</div>
+          <div className="col-span-2">Latencia</div>
           <div className="col-span-2">Estado</div>
         </div>
         <div className="max-h-[55vh] overflow-y-auto divide-y divide-slate-100">
           {rows.length === 0 && (
-            <div className="px-5 py-10 text-center text-slate-400 text-sm">
-              {filter === "failed"
-                ? "¡Genial! No tienes verbos fallados todavía."
-                : "Sin resultados en este filtro."}
-            </div>
+            <div className="px-5 py-10 text-center text-slate-400 text-sm">Sin resultados</div>
           )}
           {rows.map((r) => (
             <div key={r.id} className="px-4 sm:px-5 py-3 text-sm sm:grid sm:grid-cols-12 flex flex-wrap items-center gap-2">
               <div className="sm:col-span-3 font-semibold flex items-center gap-2 w-full sm:w-auto">
                 {r.base} <SpeakBtn text={r.base} />
-                {r.isFailed && (
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                    fallado
-                  </span>
-                )}
+                {r.isFailed && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">fallado</span>}
               </div>
-              <div className="sm:col-span-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.type==="regular" ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-700"}`}>
-                  {r.type}
+              <div className="sm:col-span-1">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${r.type === "regular" ? "bg-emerald-100 text-emerald-700" : "bg-brand-100 text-brand-700"}`}>
+                  {r.type === "regular" ? "reg" : "irreg"}
                 </span>
               </div>
               <div className="sm:col-span-1 text-xs sm:text-sm"><span className="sm:hidden text-slate-400">Int: </span>{r.attempts}</div>
-              <div className="sm:col-span-1 text-xs sm:text-sm"><span className="sm:hidden text-slate-400">OK: </span>{r.correct}</div>
               <div className="sm:col-span-1 text-xs sm:text-sm">
                 <span className="sm:hidden text-slate-400">Fall: </span>
                 <span className={r.fails > 0 ? "text-rose-600 font-semibold" : ""}>{r.fails}</span>
               </div>
               <div className="sm:col-span-2 text-xs sm:text-sm">
                 <span className={r.attempts && r.acc < 60 ? "text-rose-600 font-semibold" : ""}>{r.acc}%</span>
+              </div>
+              <div className="sm:col-span-2 text-xs sm:text-sm">
+                {r.avgLat !== null ? (
+                  <span className={r.avgLat > 3 ? "text-amber-600 font-semibold" : "text-slate-700"}>{r.avgLat}s</span>
+                ) : <span className="text-slate-300">—</span>}
               </div>
               <div className="sm:col-span-2"><StatusBadge status={statusEs(r.status)} /></div>
             </div>
