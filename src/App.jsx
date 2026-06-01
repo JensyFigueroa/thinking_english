@@ -231,7 +231,7 @@ function Dashboard({ stats, go, streak }) {
           <Brain className="w-5 h-5" />
           <div>
             <div>Think in English</div>
-            <div className="text-xs font-normal text-white/85">Piensa en inglés · A1/A2/B1</div>
+            <div className="text-xs font-normal text-white/85">Piensa en inglés · A1/A2/B1/B2</div>
           </div>
         </button>
       </div>
