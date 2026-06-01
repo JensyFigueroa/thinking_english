@@ -8,7 +8,7 @@ import {
 import { VERBS } from "./verbs";
 import { REGULAR_VERBS } from "./regularVerbs";
 import { PHRASES } from "./phrases";
-import SpeakingPractice from "./SpeakingPractice";
+import SpeakingPractice, { computeSpeakingMastery, getPhraseStatus, MASTERY_THRESHOLD, MASTERY_MIN_GOODS } from "./SpeakingPractice";
 
 const ALL_VERBS = [...VERBS, ...REGULAR_VERBS];
 const STORAGE_KEY = "verb-trainer-v1";
@@ -813,6 +813,7 @@ function ThinkInEnglish({ onPractice }) {
         <LevelTab id="A1"  label={`A1 (${PHRASES.filter(p=>p.level==="A1").length})`}  active={filter} onChange={setFilter} />
         <LevelTab id="A2"  label={`A2 (${PHRASES.filter(p=>p.level==="A2").length})`}  active={filter} onChange={setFilter} />
         <LevelTab id="B1"  label={`B1 (${PHRASES.filter(p=>p.level==="B1").length})`}  active={filter} onChange={setFilter} />
+        <LevelTab id="B2"  label={`B1 (${PHRASES.filter(p=>p.level==="B2").length})`}  active={filter} onChange={setFilter} />
       </div>
 
       <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 mb-4">
@@ -1085,6 +1086,9 @@ function ProgressView({ progress, stats }) {
         )}
       </div>
 
+      {/* ===== SPEAKING PROGRESS ===== */}
+      <SpeakingSummary />
+
       {/* FILTROS */}
       <div className="flex gap-2 mb-3 overflow-x-auto pb-2 -mx-1 px-1">
         <button onClick={() => setFilter("all")}        className={tabClass("all")}>Todos <span className={badge("all")}>{counts.all}</span></button>
@@ -1197,6 +1201,139 @@ function StudyTab({ id, label, count, active, onChange }) {
         {count}
       </span>
     </button>
+  );
+}
+
+function SpeakingSummary() {
+  const attempts = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem("speaking-attempts-v1")) || []; }
+    catch { return []; }
+  }, []);
+
+  const mastery = useMemo(() => computeSpeakingMastery(attempts), [attempts]);
+
+  const stats = useMemo(() => {
+    const totalPhrases = PHRASES.length;
+    let mastered = 0, practicing = 0;
+    Object.values(mastery).forEach((m) => {
+      const s = getPhraseStatus(m);
+      if (s === "mastered") mastered++;
+      else if (s === "practicing") practicing++;
+    });
+    const pending = totalPhrases - mastered - practicing;
+    const pct = Math.round((mastered / totalPhrases) * 100);
+
+    const allAcc = attempts.map((a) => a.accuracy);
+    const avgAcc = allAcc.length ? Math.round(allAcc.reduce((a, b) => a + b, 0) / allAcc.length) : 0;
+    const allLat = attempts.map((a) => a.latency);
+    const avgLat = allLat.length ? +(allLat.reduce((a, b) => a + b, 0) / allLat.length).toFixed(1) : 0;
+
+    return { totalPhrases, mastered, practicing, pending, pct, avgAcc, avgLat, count: attempts.length };
+  }, [attempts, mastery]);
+
+  // Top 5 frases más débiles (con intentos pero best < 80)
+  const weakest = useMemo(() => {
+    return PHRASES
+      .map((p) => ({ phrase: p, m: mastery[p.id] }))
+      .filter(({ m }) => m && m.best < MASTERY_THRESHOLD)
+      .sort((a, b) => a.m.best - b.m.best)
+      .slice(0, 5);
+  }, [mastery]);
+
+  if (stats.count === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-100 p-5 sm:p-6 shadow-sm mb-5">
+        <div className="flex items-center gap-2 font-bold mb-2">
+          <Mic className="w-4 h-4 text-rose-500" />
+          Speaking Progress
+        </div>
+        <p className="text-sm text-slate-500">
+          Aún no has practicado Speaking. Ve a <b>Speaking</b> y empieza a hablar en inglés. 🎤
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 sm:p-6 shadow-sm mb-5">
+      <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+        <div>
+          <div className="font-bold flex items-center gap-2 text-base sm:text-lg">
+            <Mic className="w-5 h-5 text-rose-500" />
+            Speaking Progress
+          </div>
+          <div className="text-xs text-slate-500 mt-0.5">
+            Dominadas con ≥{MASTERY_THRESHOLD}% en {MASTERY_MIN_GOODS}+ intentos
+          </div>
+        </div>
+        <div className="text-xs sm:text-sm font-semibold bg-rose-50 text-rose-700 px-3 py-2 rounded-xl">
+          {stats.count} intentos · {stats.avgAcc}% prom.
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mb-1 flex justify-between text-sm">
+        <span className="text-slate-600 font-medium">Frases dominadas</span>
+        <span className="font-bold">{stats.mastered}/{stats.totalPhrases}</span>
+      </div>
+      <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-4">
+        <div
+          className="h-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all"
+          style={{ width: `${stats.pct}%` }}
+        />
+      </div>
+
+      {/* Mini stats */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
+        <SpkMini label="Dominadas" value={stats.mastered} color="emerald" />
+        <SpkMini label="Practicando" value={stats.practicing} color="amber" />
+        <SpkMini label="Pendientes" value={stats.pending} color="slate" />
+      </div>
+
+      {/* Top débiles */}
+      {weakest.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            Frases para mejorar (top 5 débiles)
+          </div>
+          <div className="space-y-1.5">
+            {weakest.map(({ phrase, m }) => (
+              <div key={phrase.id} className="flex items-center gap-3 py-1.5">
+                <div className={`w-12 h-9 rounded-lg grid place-items-center font-extrabold text-xs shrink-0
+                  ${m.best >= 60 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"}`}>
+                  {m.best}%
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{phrase.en}</div>
+                  <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 font-bold">{phrase.level}</span>
+                    <span>{m.attempts} intento{m.attempts === 1 ? "" : "s"}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="text-xs text-slate-500 mt-3">
+            💡 Activa <b>Smart Drill</b> en Speaking para practicar solo estas frases.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SpkMini({ label, value, color }) {
+  const map = {
+    emerald: "bg-emerald-50 text-emerald-700",
+    amber:   "bg-amber-50 text-amber-700",
+    slate:   "bg-slate-50 text-slate-700",
+  };
+  return (
+    <div className={`rounded-xl p-3 ${map[color]}`}>
+      <div className="text-xl sm:text-2xl font-extrabold">{value}</div>
+      <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">{label}</div>
+    </div>
   );
 }
 

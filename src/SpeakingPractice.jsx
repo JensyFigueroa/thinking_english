@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
-  Mic, Play, Volume2, Trophy, Clock, RefreshCw, Zap, Target,
+  Mic, Play, Volume2, Trophy, Clock, RefreshCw, Zap, Target, Sparkles,
 } from "lucide-react";
 import { PHRASES } from "./phrases";
 
@@ -14,6 +14,34 @@ const isIOS =
 const isSecure =
   typeof window !== "undefined" &&
   (window.location.protocol === "https:" || window.location.hostname === "localhost");
+
+/* ===== Sistema de maestría de frases ===== */
+export const MASTERY_THRESHOLD = 80;      // % requerido
+export const MASTERY_MIN_GOODS = 2;       // intentos ≥80% para dominarla
+
+export function computeSpeakingMastery(attempts) {
+  const byId = {};
+  attempts.forEach((a) => {
+    if (!byId[a.phraseId]) byId[a.phraseId] = {
+      attempts: 0, best: 0, goodCount: 0, totalAcc: 0, totalLat: 0, lastDate: 0,
+    };
+    const b = byId[a.phraseId];
+    b.attempts++;
+    b.totalAcc += a.accuracy;
+    b.totalLat += a.latency;
+    if (a.accuracy >= MASTERY_THRESHOLD) b.goodCount++;
+    if (a.accuracy > b.best) b.best = a.accuracy;
+    const t = new Date(a.date).getTime();
+    if (t > b.lastDate) b.lastDate = t;
+  });
+  return byId;
+}
+
+export function getPhraseStatus(m) {
+  if (!m) return "pending";
+  if (m.goodCount >= MASTERY_MIN_GOODS) return "mastered";
+  return "practicing";
+}
 
 const loadAttempts = () => {
   try { return JSON.parse(localStorage.getItem(SPEAKING_KEY)) || []; }
@@ -77,12 +105,8 @@ function getMotivation(acc) {
 
 export default function SpeakingPractice({ onPractice }) {
   const [filter, setFilter] = useState("all");
-  const pool = useMemo(
-    () => filter === "all" ? PHRASES : PHRASES.filter((p) => p.level === filter),
-    [filter]
-  );
 
-  const [phrase, setPhrase] = useState(() => pool[Math.floor(Math.random() * pool.length)]);
+  const [phrase, setPhrase] = useState(() => PHRASES[Math.floor(Math.random() * PHRASES.length)]);
   const [phraseShownAt, setPhraseShownAt] = useState(() => Date.now());
   const [rate, setRate] = useState(1);
 
@@ -90,6 +114,21 @@ export default function SpeakingPractice({ onPractice }) {
   const [result, setResult]       = useState(null);
   const [error, setError]         = useState(null);
   const [attempts, setAttempts]   = useState(loadAttempts);
+  const [drillMode, setDrillMode] = useState(false);
+  const [justMastered, setJustMastered] = useState(null);
+
+  const mastery = useMemo(() => computeSpeakingMastery(attempts), [attempts]);
+
+  const pool = useMemo(() => {
+    let p = filter === "all" ? PHRASES : PHRASES.filter((x) => x.level === filter);
+    if (drillMode) {
+      p = p.filter((x) => {
+        const m = mastery[x.id];
+        return !m || m.best < MASTERY_THRESHOLD;
+      });
+    }
+    return p.length ? p : (filter === "all" ? PHRASES : PHRASES.filter((x) => x.level === filter));
+  }, [filter, drillMode, mastery, attempts.length]);
 
   const recognitionRef    = useRef(null);
   const recordStartRef    = useRef(0);
@@ -177,15 +216,26 @@ export default function SpeakingPractice({ onPractice }) {
 
     setResult({ accuracy, transcript, confidence, latency, motivation });
 
-    setAttempts((prev) => [...prev, {
+    const newAttempt = {
       id: Date.now(),
       phraseId: target.id,
-      en: target.en,
-      es: target.es,
-      level: target.level,
+      en: target.en, es: target.es, level: target.level,
       accuracy, latency, transcript,
       date: new Date().toISOString(),
-    }]);
+    };
+
+    setAttempts((prev) => {
+      const next = [...prev, newAttempt];
+      // ¿Acaba de dominarla?
+      const prevGoods = prev.filter((a) => a.phraseId === target.id && a.accuracy >= MASTERY_THRESHOLD).length;
+      const wasMastered = prevGoods >= MASTERY_MIN_GOODS;
+      const isNowMastered = (prevGoods + (accuracy >= MASTERY_THRESHOLD ? 1 : 0)) >= MASTERY_MIN_GOODS;
+      if (!wasMastered && isNowMastered) {
+        setJustMastered({ en: target.en, es: target.es });
+        setTimeout(() => setJustMastered(null), 4500);
+      }
+      return next;
+    });
 
     onPractice && onPractice();
   }
@@ -256,6 +306,16 @@ export default function SpeakingPractice({ onPractice }) {
         Cierra el <b>Thinking Gap</b>: escucha, piensa en inglés y dilo en voz alta.
       </p>
 
+      {justMastered && (
+        <div className="mb-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-soft flex items-center gap-3 animate-pulse">
+          <Trophy className="w-7 h-7 shrink-0" />
+          <div>
+            <div className="font-extrabold text-base sm:text-lg">¡Frase dominada! 🎉</div>
+            <div className="text-xs sm:text-sm opacity-90">"{justMastered.en}" — ¡a por la siguiente!</div>
+          </div>
+        </div>
+      )}
+
       {!isSecure && (
         <div className="mb-4 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
           <b>⚠️ Necesitas HTTPS</b> para usar el micrófono en este dispositivo.
@@ -270,11 +330,21 @@ export default function SpeakingPractice({ onPractice }) {
         <KPI icon={Target} value={`${totals.best}%`} label="Mejor intento"  color="rose" />
       </div>
 
-      {/* FILTRO POR NIVEL */}
-      <div className="flex gap-2 mb-5 flex-wrap">
+      {/* FILTRO POR NIVEL + DRILL */}
+      <div className="flex gap-2 mb-5 flex-wrap items-center">
+        <button
+          onClick={() => setDrillMode((d) => !d)}
+          className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-soft
+            ${drillMode
+              ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+              : "bg-white text-amber-700 border border-amber-200 hover:border-amber-400"}`}>
+          <Sparkles className="w-4 h-4" />
+          {drillMode ? "Drill ON · solo débiles" : "Smart Drill"}
+        </button>
+        <div className="w-px h-6 bg-slate-200 mx-1" />
         {[
           { id: "all", label: "Todas" },
-          { id: "A1", label: "A1" }, { id: "A2", label: "A2" }, { id: "B1", label: "B1" },
+          { id: "A1", label: "A1" }, { id: "A2", label: "A2" }, { id: "B1", label: "B1" }, { id: "B2", label: "B2" }
         ].map((t) => (
           <button key={t.id} onClick={() => setFilter(t.id)}
             className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition
