@@ -813,7 +813,7 @@ function ThinkInEnglish({ onPractice }) {
         <LevelTab id="A1"  label={`A1 (${PHRASES.filter(p=>p.level==="A1").length})`}  active={filter} onChange={setFilter} />
         <LevelTab id="A2"  label={`A2 (${PHRASES.filter(p=>p.level==="A2").length})`}  active={filter} onChange={setFilter} />
         <LevelTab id="B1"  label={`B1 (${PHRASES.filter(p=>p.level==="B1").length})`}  active={filter} onChange={setFilter} />
-        <LevelTab id="B2"  label={`B1 (${PHRASES.filter(p=>p.level==="B2").length})`}  active={filter} onChange={setFilter} />
+        <LevelTab id="B2"  label={`B2 (${PHRASES.filter(p=>p.level==="B2").length})`}  active={filter} onChange={setFilter} />
       </div>
 
       <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 mb-4">
