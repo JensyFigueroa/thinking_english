@@ -4,7 +4,7 @@ export const PHRASES = [
   // ============ A1 ============
   { level:"A1", es:"Hola, ¿cómo estás?", en:"Hey, how's it going?", alts:["Hi, how are you?","Hello, how are you?"], hint:"Saludo casual con contracción" },
   { level:"A1", es:"Me llamo Juan", en:"My name's Juan", alts:["My name is Juan","I'm Juan"], hint:"Contracción nativa de name + is" },
-  { level:"A1", es:"Soy de Venezolano", en:"I'm from Venezolano", alts:["I am from Venezolano"], hint:"Origen → from" },
+  { level:"A1", es:"Soy de Venezolano", en:"I'm from Venezuela", alts:["I am from Venezuela"], hint:"Origen → from" },
   { level:"A1", es:"Mucho gusto", en:"Nice to meet you", alts:["Pleased to meet you","Good to meet you"], hint:"Conocer a alguien por primera vez" },
   { level:"A1", es:"¿Cómo te llamas?", en:"What's your name?", alts:["What is your name?"], hint:"Preguntar el nombre con contracción" },
   { level:"A1", es:"¿De dónde eres?", en:"Where are you from?", alts:["Where do you come from?"], hint:"Origen → where + from" },
