@@ -110,7 +110,7 @@ export const PHRASES = [
   { level:"B1", es:"Por eso renuncié a mi trabajo", en:"That's why I quit my job", alts:["That is the reason why I left my employment"], hint:"quit = renunciar / dejar" },
   { level:"B1", es:"Estaba lloviendo anteayer por la noche", en:"It was raining the day before last night", alts:[], hint:"Pasado continuo para describir el clima" },
   { level:"B1", es:"Te envié el correo anteayer por la noche", en:"I sent ya the email the day before last night", alts:["I sent you the email two nights ago"], hint:"'two nights ago' es una alternativa común para esta frase" },
-  { level:"B1", es:"¿Dónde estabas anteayer por la noche?", en:"Where're you the day before last night?", alts:["Where were you the night before last?"], hint:"'Where're you' es la contracción nativa de where + were" },
+  { level:"B1", es:"¿Dónde estabas anteayer por la noche?", en:"Where're you the night before last?", alts:["Where were you the night before last?"], hint:"'Where're you' es la contracción nativa de where + were" },
   { level:"B1", es:"Además de eso, todo está bien", en:"Beside that, everything's fine", alts:["Besides that, everything is okay"], hint:"Beside/Besides se usan de forma intercambiable al inicio" },
   { level:"B1", es:"Siéntate al lado de mí", en:"Sit down beside me", alts:["Sit next to me"], hint:"Beside como preposición de lugar (al lado de)" },
   { level:"B1", es:"Si yo fuera tú, aceptaría el trabajo", en:"If I were you, I'd take the job", alts:["If I were you, I would take the job"], hint:"Condicional 2: If + were + would" },
