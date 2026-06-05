@@ -3,6 +3,11 @@
 export const PHRASES = [
   // ============ A1 ============
   { level:"A1", es:"Hola, ¿cómo estás?", en:"Hey, how's it going?", alts:["Hi, how are you?","Hello, how are you?"], hint:"Saludo casual con contracción" },
+  { level:"A1", es:"Te veo mañana por la mañana", en:"See ya tomorrow morning", alts:["I will see you tomorrow morning"], hint:"Reducción de see you a 'see ya'" },
+  { level:"A1", es:"Tengo una reunión mañana por la tarde", en:"I gotta meeting tomorrow afternoon", alts:["I have a meeting tomorrow afternoon"], hint:"'gotta' para indicar que tienes un compromiso agendado" },
+  { level:"A1", es:"¿Qué vas a hacer mañana por la noche?", en:"What you gonna do tomorrow night?", alts:["What are you going to do tomorrow night?"], hint:"En el habla rápida se omite el 'are' y 'going to' se vuelve 'gonna'" },
+  { level:"A1", es:"Solo soy un estudiante", en:"I'm just a student", alts:["I am only a student"], hint:"'just' se usa para limitar o simplificar algo" },
+  { level:"A1", es:"Solo dame un segundo", en:"Just give me a sec", alts:["Just give me a second"], hint:"'sec' es el acortamiento típico de second" },
   { level:"A1", es:"Me llamo Juan", en:"My name's Juan", alts:["My name is Juan","I'm Juan"], hint:"Contracción nativa de name + is" },
   { level:"A1", es:"Soy de Venezolano", en:"I'm from Venezuela", alts:["I am from Venezuela"], hint:"Origen → from" },
   { level:"A1", es:"Mucho gusto", en:"Nice to meet you", alts:["Pleased to meet you","Good to meet you"], hint:"Conocer a alguien por primera vez" },
@@ -45,6 +50,13 @@ export const PHRASES = [
 
   // ============ A2 ============
   { level:"A2", es:"Voy a la tienda", en:"I'm gonna go to the store", alts:["I'm going to the store","I am going to the store"], hint:"Usa 'gonna go' en lugar de 'going to'" },
+  { level:"A2", es:"Por eso no quiero ir", en:"That's why I don't wanna go", alts:["That is why I do not want to go"], hint:"That's why = por eso / wanna = want to" },
+  { level:"A2", es:"Ella se mudó, por eso está feliz", en:"She moved, that's why she's happy", alts:["She moved, that is the reason why she is happy"], hint:"Estructura causa-efecto muy directa" },
+  { level:"A2", es:"El juego es pasado mañana", en:"The game's the day after tomorrow", alts:["The game is the day after tomorrow"], hint:"Contracción del sujeto con el verbo is" },
+  { level:"A2", es:"Tengo que entregar el proyecto pasado mañana", en:"I gotta turn in the project the day after tomorrow", alts:["I have to submit the project the day after tomorrow"], hint:"turn in = entregar (phrasal verb de software/escuela)" },
+  { level:"A2", es:"Llegué aquí anteayer", en:"I got here the day before yesterday", alts:["I arrived here the day before yesterday"], hint:"'get here' en pasado se usa más que 'arrive'" },
+  { level:"A2", es:"Ayer no, anteayer", en:"Not yesterday, the day before yesterday", alts:[], hint:"Frase corta de aclaración" },
+  { level:"A2", es:"Acabo de terminar mi tarea", en:"I just finished my homework", alts:["I have just finished my homework"], hint:"'just' en pasado simple indica una acción recién hecha" },
   { level:"A2", es:"Tengo que trabajar mañana", en:"I gotta work tomorrow", alts:["I have to work tomorrow","I've got to work tomorrow"], hint:"have to = gotta (obligación)" },
   { level:"A2", es:"¿Me trae la cuenta, por favor?", en:"Can I have the check, please?", alts:["Could I have the check, please?","The check, please"], hint:"En USA se dice 'check', no 'bill'" },
   { level:"A2", es:"Estoy buscando la estación de tren", en:"I'm looking for the train station", alts:["I am looking for the train station"], hint:"look for = buscar" },
@@ -92,6 +104,15 @@ export const PHRASES = [
 
   // ============ B1 ============
   { level:"B1", es:"Debí haberte llamado", en:"I should've called you", alts:["I should have called you"], hint:"should've es la contracción hablada estándar" },
+  { level:"B2", es:"No podemos lanzar la app pasado mañana; no está lista", en:"We can't launch the app the day after tomorrow; it's not ready", alts:["We cannot deploy the application the day after tomorrow"], hint:"launch/deploy = lanzar/desplegar software" },
+  { level:"B2", es:"Perdimos los servidores anteayer, por eso el sitio cayó", en:"We lost the servers the day before yesterday, that's why the site went down", alts:["The website crashed because we lost the servers"], hint:"go down = caerse (un sistema o sitio web)" },
+  { level:"B2", es:"Además de aprender inglés, él programa en React", en:"Beside learning English, he codes in React", alts:["In addition to learning English, he develops in React"], hint:"Beside + gerundio (learning) para añadir información" }
+  { level:"B1", es:"Por eso renuncié a mi trabajo", en:"That's why I quit my job", alts:["That is the reason why I left my employment"], hint:"quit = renunciar / dejar" },
+  { level:"B1", es:"Estaba lloviendo anteayer por la noche", en:"It was raining the day before last night", alts:[], hint:"Pasado continuo para describir el clima" },
+  { level:"B1", es:"Te envié el correo anteayer por la noche", en:"I sent ya the email the day before last night", alts:["I sent you the email two nights ago"], hint:"'two nights ago' es una alternativa común para esta frase" },
+  { level:"B1", es:"¿Dónde estabas anteayer por la noche?", en:"Where're you the day before last night?", alts:["Where were you the night before last?"], hint:"'Where're you' es la contracción nativa de where + were" },
+  { level:"B1", es:"Además de eso, todo está bien", en:"Beside that, everything's fine", alts:["Besides that, everything is okay"], hint:"Beside/Besides se usan de forma intercambiable al inicio" },
+  { level:"B1", es:"Siéntate al lado de mí", en:"Sit down beside me", alts:["Sit next to me"], hint:"Beside como preposición de lugar (al lado de)" },
   { level:"B1", es:"Si yo fuera tú, aceptaría el trabajo", en:"If I were you, I'd take the job", alts:["If I were you, I would take the job"], hint:"Condicional 2: If + were + would" },
   { level:"B1", es:"Ha pasado mucho tiempo", en:"It's been a long time", alts:["It has been a long time","Long time no see"], hint:"Present perfect impersonal" },
   { level:"B1", es:"Estoy acostumbrado a levantarme temprano", en:"I'm used to waking up early", alts:["I am used to waking up early"], hint:"used to + verbo-ing (costumbre)" },

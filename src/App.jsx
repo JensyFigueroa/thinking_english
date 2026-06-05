@@ -962,7 +962,7 @@ function ProgressView({ progress, stats }) {
     const days = [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 4; i >= 0; i--) {
       const dayStart = new Date(now); dayStart.setDate(now.getDate() - i);
       const dayEnd   = new Date(dayStart); dayEnd.setDate(dayStart.getDate() + 1);
       const count = events.filter((t) => t >= dayStart.getTime() && t < dayEnd.getTime()).length;
