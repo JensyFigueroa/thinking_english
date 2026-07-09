@@ -63,7 +63,7 @@ export const PHRASES = [
   { level:"B2", es:"Estoy entendiendo el concepto", en:"I'm getting the hang of it", alts:["I'm understanding the concept"], hint:"get the hang of it = agarrarle el truco a algo" },
   { level:"B2", es:"Me estoy quedando sin tiempo", en:"I'm getting low on time", alts:["I'm running out of time"], hint:"" },
 
-  // ============ 6. I'm trying + (verb) ============
+  /* // ============ 6. I'm trying + (verb) ============
   { level:"A1", es:"Estoy intentando aprender", en:"I'm trying to learn", alts:["I am trying to learn"], hint:"try + to + verbo base" },
   { level:"A1", es:"Estoy intentando dormir", en:"I'm trying to sleep", alts:[], hint:"" },
   { level:"A2", es:"Estoy tratando de hablar más rápido", en:"I'm trying to speak faster", alts:[], hint:"" },
@@ -349,7 +349,7 @@ export const PHRASES = [
   { level:"B2", es:"Espero con ansias nuestra próxima reunión de sincronización", en:"I'm looking forward to our next sync meeting", alts:[], hint:"sync meeting = reunión de alineación/sincronización" },
   { level:"B2", es:"Espero con ansias obtener mi certificación de Six Sigma", en:"I'm looking forward to getting my Six Sigma certification", alts:[], hint:"" },
   { level:"B2", es:"Espero con ansias la próxima sesión de trading con mercado abierto", en:"I'm looking forward to the next live trading session", alts:[], hint:"" },
-  { level:"B2", es:"Espero con ansias ver el resultado final de este proyecto", en:"I'm looking forward to seeing the final outcome of this project", alts:[], hint:"outcome = resultado final/conclusión" },
+  { level:"B2", es:"Espero con ansias ver el resultado final de este proyecto", en:"I'm looking forward to seeing the final outcome of this project", alts:[], hint:"outcome = resultado final/conclusión" }, */
 ].map((p, i) => ({ id: i + 1, ...p }));
 
 
