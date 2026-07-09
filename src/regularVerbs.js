@@ -1,8 +1,8 @@
 // 222 verbos regulares más usados en inglés
 // En los regulares: pasado = participio = base + -ed (con variantes)
 export const REGULAR_VERBS = [
-  ["walk","walked","caminar"],
-  ["listen","listened","escuchar"],
+   ["walk","walked","caminar"],
+  /*["listen","listened","escuchar"],
   ["look","looked","mirar"],
   ["learn","learned","aprender"],
   ["love","loved","amar"],
@@ -55,7 +55,7 @@ export const REGULAR_VERBS = [
   ["wait","waited","esperar"],
   ["improve","improved","mejorar"],
   ["increase","increased","aumentar"],
-  ["explore","explored","explorar"]
+  ["explore","explored","explorar"] */
   // ["accept","accepted","aceptar"],
   // ["add","added","agregar / sumar"],
   // ["admire","admired","admirar"],
