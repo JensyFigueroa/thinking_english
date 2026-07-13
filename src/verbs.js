@@ -2,8 +2,8 @@
 export const VERBS = [
   ["arise","arose","arisen","surgir / levantarse"],
 ["awake","awoke","awoken","despertarse"],
-["be","was/were","been","ser / estar"],
-["bear","bore","borne / born","soportar / dar a luz"],
+["be","was were","been","ser / estar"],
+["bear","bore","borne born","soportar / dar a luz"],
 ["beat","beat","beaten","golpear"],
 ["become","became","become","llegar a ser"],
 ["begin","began","begun","empezar"],
