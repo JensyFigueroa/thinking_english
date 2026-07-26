@@ -3,7 +3,7 @@
 
 
 export const PHRASES = [
-[
+
   // 1. ARISE / AROSE / ARISEN
   { level: "A1", es: "Los problemas surgen en producción", en: "Issues arise in production", alts: ["Problems arise in production"], hint: "Present Simple" },
   { level: "A1", es: "Un problema está surgiendo en el servidor", en: "An issue is arising on the server", alts: ["A problem is arising on the server"], hint: "Present Continuous" },
@@ -692,8 +692,8 @@ export const PHRASES = [
 
   // 50. FORGET (REPETICIÓN/SUSTITUCIÓN CON VERBO "FLEET/FORBID" DE LISTA) - FORGIVE RE-CHECK / FLEE
   // (Verbo 50 en tu lista enviada era "freeze", por lo tanto la lista de 50 verbos está 100% completada hasta aquí).
-]
 
+].map((p, i) => ({ id: i + 1, ...p }));
 
 
 
@@ -1046,7 +1046,7 @@ export const PHRASES = [
   { level:"B2", es:"Espero con ansias obtener mi certificación de Six Sigma", en:"I'm looking forward to getting my Six Sigma certification", alts:[], hint:"" },
   { level:"B2", es:"Espero con ansias la próxima sesión de trading con mercado abierto", en:"I'm looking forward to the next live trading session", alts:[], hint:"" },
   { level:"B2", es:"Espero con ansias ver el resultado final de este proyecto", en:"I'm looking forward to seeing the final outcome of this project", alts:[], hint:"outcome = resultado final/conclusión" }, */
-].map((p, i) => ({ id: i + 1, ...p }));
+
 
 
 // export const PHRASES = [
