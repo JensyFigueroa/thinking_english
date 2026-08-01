@@ -29,8 +29,8 @@ export const VERBS = [
   ["try", "tried", "tried", "intentar / probar"],
   ["let", "let", "let", "permitir / dejar"],
   ["use", "used", "used", "usar / utilizar"],
-  ["call", "called", "called", "llamar"]
-  ["bring","brought","brought","traer / llevar"],
+  ["call", "called", "called", "llamar"],
+ 
 
 // ["arise","arose","arisen","surgir / levantarse"],
 // ["awake","awoke","awoken","despertarse"],
