@@ -1,6 +1,6 @@
 // 220 verbos irregulares más usados en inglés
 export const VERBS = [
-["be", "was / were", "been", "ser / estar"],
+["be", "was were", "been", "ser / estar"],
   ["have", "had", "had", "tener / haber"],
   ["do", "did", "done", "hacer / realizar"],
   ["get", "got", "gotten", "conseguir / obtener / llegar / entender"],
