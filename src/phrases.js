@@ -362,8 +362,18 @@ export const PHRASES = [
   { level: "B1", es: "Se convirtió en mi plato favorito.", en: "It became my favorite dish.", alts: ["It turned into my top choice"], hint: "Restaurante" },
   { level: "B1", es: "El retraso se volvió inevitable.", en: "The delay became unavoidable.", alts: ["The delay was inevitable"], hint: "Aeropuerto" },
   { level: "B1", es: "Esto se ha convertido en un hábito diario.", en: "This has become a daily habit.", alts: ["It's become a routine"], hint: "Hábitos / Retos" },
-  { level: "B1", es: "Llegó a ser el mejor proyecto del año.", en: "It became the best project of the year.", alts: ["It turned out to be the best project"], hint: "Entrevista / Logros" }
+  { level: "B1", es: "Llegó a ser el mejor proyecto del año.", en: "It became the best project of the year.", alts: ["It turned out to be the best project"], hint: "Entrevista / Logros" },
 
+  // 31. CONECTORS
+  { level: "A2", es: "Sin embargo, estoy cansado.", en: "However, I'm tired.", alts: ["I'm tired, however."], hint: "Contraste" },
+  { level: "A2", es: "Por cierto, ¿dónde vives?", en: "By the way, where do you live?", alts: ["Where do you live, by the way?"], hint: "Cambiar de tema / agregar algo" },
+  { level: "A2", es: "Además, necesito más tiempo.", en: "Besides, I need more time.", alts: ["I need more time, besides."], hint: "Además / adicionalmente" },
+  { level: "A2", es: "Ni siquiera lo sabía.", en: "I didn't even know.", alts: ["I didn't know, not even that."], hint: "Ni siquiera" },
+  { level: "A2", es: "De hecho, él trabaja aquí.", en: "In fact, he works here.", alts: ["He works here, in fact."], hint: "De hecho / en realidad" },
+  { level: "A2", es: "Incluso si llueve, iremos.", en: "Even if it rains, we'll go.", alts: ["We'll go even if it rains."], hint: "Incluso si / aunque" },
+  { level: "A2", es: "Aparte de Juan, todos vinieron.", en: "Apart from Juan, everyone came.", alts: ["Everyone came apart from Juan."], hint: "Aparte de / excepto" },
+  { level: "A2", es: "Al menos lo intenté.", en: "At least I tried.", alts: ["I tried, at least."], hint: "Al menos" },
+  { level: "A2", es: "Está lloviendo, por lo tanto, nos quedaremos en casa.", en: "It's raining, therefore, we'll stay home.", alts: ["It's raining, so we'll stay home."], hint: "Por lo tanto / como consecuencia" }
 
 ].map((p, i) => ({ id: i + 1, ...p }));
 
